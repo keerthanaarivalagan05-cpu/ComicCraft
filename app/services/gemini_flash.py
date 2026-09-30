@@ -1,3 +1,5 @@
+import time
+
 from google import genai
 from google.genai import types
 
@@ -54,27 +56,51 @@ IMPORTANT REQUIREMENTS:
 9. Make the panels visually different but narratively connected.
 """
 
-    response = client.models.generate_content(
-        model=settings.gemini_outline_model,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=OutlineResponse,
-            temperature=0.9,
-        ),
-    )
+    max_retries = 4
 
-    if not response.parsed:
-        raise RuntimeError(
-            "Gemini returned an empty comic outline."
-        )
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model=settings.gemini_outline_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=OutlineResponse,
+                    temperature=0.9,
+                ),
+            )
 
-    outline = response.parsed
+            if not response.parsed:
+                raise RuntimeError(
+                    "Gemini returned an empty comic outline."
+                )
 
-    if len(outline.panels) != settings.panel_count:
-        raise RuntimeError(
-            f"Gemini generated {len(outline.panels)} panels "
-            f"but {settings.panel_count} were required."
-        )
+            outline = response.parsed
 
-    return outline
+            if len(outline.panels) != settings.panel_count:
+                raise RuntimeError(
+                    f"Gemini generated {len(outline.panels)} panels "
+                    f"but {settings.panel_count} were required."
+                )
+
+            return outline
+
+        except Exception as error:
+
+            error_text = str(error)
+
+            # Retry temporary Gemini availability/rate-limit errors.
+            if "503" in error_text or "UNAVAILABLE" in error_text:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+
+                    print(
+                        f"Gemini temporarily unavailable. "
+                        f"Retrying in {wait_time} seconds..."
+                    )
+
+                    time.sleep(wait_time)
+                    continue
+
+            # For other errors, stop immediately.
+            raise

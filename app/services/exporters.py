@@ -10,7 +10,6 @@ from ..schemas import (
 
 
 def pdf_safe(text: str) -> str:
-
     return (
         text
         .encode("latin-1", "replace")
@@ -21,7 +20,6 @@ def pdf_safe(text: str) -> str:
 class ComicPDF(FPDF):
 
     def header(self):
-
         self.set_font(
             "Helvetica",
             "B",
@@ -71,9 +69,16 @@ def save_pdf(
         )
     )
 
+    # Safe text width for A4 page
+    TEXT_WIDTH = 180
+
     for panel in panels:
 
         pdf.add_page()
+
+        # -------------------------
+        # Panel title
+        # -------------------------
 
         pdf.set_font(
             "Helvetica",
@@ -88,7 +93,7 @@ def save_pdf(
         )
 
         pdf.multi_cell(
-            0,
+            TEXT_WIDTH,
             10,
             pdf_safe(
                 f"Panel {panel.panel_number}: "
@@ -98,6 +103,10 @@ def save_pdf(
 
         pdf.ln(3)
 
+        # -------------------------
+        # Panel image
+        # -------------------------
+
         image_path = Path(
             panel.image_path
         )
@@ -105,7 +114,6 @@ def save_pdf(
         if image_path.exists():
 
             with Image.open(image_path) as image:
-
                 width, height = image.size
 
             max_width = 175
@@ -132,6 +140,10 @@ def save_pdf(
 
             pdf.ln(5)
 
+        # -------------------------
+        # Scene description
+        # -------------------------
+
         pdf.set_font(
             "Helvetica",
             "I",
@@ -139,7 +151,7 @@ def save_pdf(
         )
 
         pdf.multi_cell(
-            0,
+            TEXT_WIDTH,
             6,
             pdf_safe(
                 panel.scene_description
@@ -147,6 +159,10 @@ def save_pdf(
         )
 
         pdf.ln(3)
+
+        # -------------------------
+        # Caption
+        # -------------------------
 
         if panel.caption:
 
@@ -157,7 +173,7 @@ def save_pdf(
             )
 
             pdf.multi_cell(
-                0,
+                TEXT_WIDTH,
                 6,
                 pdf_safe(
                     "Caption: "
@@ -167,6 +183,10 @@ def save_pdf(
 
             pdf.ln(2)
 
+        # -------------------------
+        # Narration
+        # -------------------------
+
         pdf.set_font(
             "Helvetica",
             "",
@@ -174,7 +194,7 @@ def save_pdf(
         )
 
         pdf.multi_cell(
-            0,
+            TEXT_WIDTH,
             6,
             pdf_safe(
                 panel.narration
@@ -182,6 +202,10 @@ def save_pdf(
         )
 
         pdf.ln(3)
+
+        # -------------------------
+        # Dialogue
+        # -------------------------
 
         if panel.dialogue:
 
@@ -192,7 +216,7 @@ def save_pdf(
             )
 
             pdf.multi_cell(
-                0,
+                TEXT_WIDTH,
                 6,
                 "Dialogue"
             )
@@ -206,7 +230,7 @@ def save_pdf(
             for line in panel.dialogue:
 
                 pdf.multi_cell(
-                    0,
+                    TEXT_WIDTH,
                     6,
                     pdf_safe(
                         f'"{line}"'
@@ -214,6 +238,10 @@ def save_pdf(
                 )
 
             pdf.ln(2)
+
+    # -------------------------
+    # Save PDF
+    # -------------------------
 
     pdf.output(
         str(output_path)
